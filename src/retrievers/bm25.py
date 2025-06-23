@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from pydantic import Field
 
@@ -7,11 +7,14 @@ from .base import BaseRetriever
 
 _DEFAULT_TOP_K_BM25 = 10
 
+
 def default_preprocessing_func(text: str) -> List[str]:
     return text.split()
 
+
 class BM25Retriever(BaseRetriever):
-    docs: List[Document] = Field(repr=False)
+    vectorizer: Any = None
+    docs: List[Union[Document, str, Dict]] = Field(repr=False)
     k: int = _DEFAULT_TOP_K_BM25
     preprocess_func: Callable[[str], List[str]] = default_preprocessing_func
 
@@ -22,37 +25,69 @@ class BM25Retriever(BaseRetriever):
         self, query: str
     ) -> List[Document]:
         processed_query = self.preprocess_func(query)
-        return_docs = self.vectorizer.get_top_n(processed_query, self.docs, n=self.k)
-        return return_docs
+        scores = self.vectorizer.get_scores(processed_query)
+        top_indices = scores.argsort()[::-1][:self.k]
+        results = [self.docs[i] for i in top_indices]
+        return results
+
+    @classmethod
+    def from_texts(
+        cls,
+        texts: Iterable[str],
+        metadatas: Optional[Iterable[dict]] = None,
+        bm25_params: Optional[Dict[str, Any]] = None,
+        preprocess_func: Callable[[str], List[str]
+                                  ] = default_preprocessing_func,
+        **kwargs: Any,
+    ) -> BaseRetriever:
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError:
+            raise ImportError(
+                "Could not import rank_bm25, please install with `pip install "
+                "rank_bm25`."
+            )
+
+        texts_processed = [preprocess_func(t) for t in texts]
+        bm25_params = bm25_params or {}
+        vectorizer = BM25Okapi(texts_processed, **bm25_params)
+        metadatas = metadatas or ({} for _ in texts)
+
+        docs = [
+            {
+                'text': text, 
+                'law_id': metadata.get('law_id', ''), 
+                'article_id': metadata.get('article_id', '')
+            }
+            for text, metadata in zip(texts, metadatas)
+        ]
+        
+        return cls(
+            vectorizer=vectorizer, docs=docs, preprocess_func=preprocess_func, **kwargs
+        )
 
     @classmethod
     def from_documents(
         cls,
         documents: Iterable[Document],
         bm25_params: Optional[Dict[str, Any]] = None,
-        preprocess_func: Callable[[str], List[str]] = default_preprocessing_func,
+        preprocess_func: Callable[[str], List[str]
+                                  ] = default_preprocessing_func,
         **kwargs: Any,
     ) -> BaseRetriever:
-        """
-        Create a BM25Retriever from a list of Document objects.
-        Args:
-            documents: A list of Document objects to vectorize.
-            bm25_params: Parameters to pass to the BM25 vectorizer.
-            preprocess_func: A function to preprocess each text before vectorization.
-            **kwargs: Any other arguments to pass to the retriever. 
-        Returns:
-            A BM25Retriever instance.
-        """
-        texts = [doc.text for doc in documents]
-        metadatas = [
-            {"law_id": doc.law_id, "article_id": doc.article_id} for doc in documents
-        ]
-        return cls.from_texts(
-            texts=texts,
-            metadatas=metadatas,
-            bm25_params=bm25_params,
+        try:
+            from rank_bm25 import BM25Okapi
+        except ImportError:
+            raise ImportError(
+                "Could not import rank_bm25, please install with `pip install "
+                "rank_bm25`."
+            )
+        texts_preprocessed = [preprocess_func(doc.text) for doc in documents]
+        bm25_params = bm25_params or {}
+        vectorizer = BM25Okapi(texts_preprocessed, **bm25_params)
+        return cls(
+            vectorizer=vectorizer,
+            docs=documents,
             preprocess_func=preprocess_func,
-            **kwargs,
+            **kwargs
         )
-        
-

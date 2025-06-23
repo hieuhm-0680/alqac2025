@@ -7,7 +7,6 @@ Competition 2025, including legal document retrieval and question answering syst
 __version__ = "0.1.0"
 __author__ = "UIT legalGrep"
 
-from src.utils.config import Settings
 from src.models.schemas import QuestionType, TaskType
 
 __all__ = ["Settings", "QuestionType", "TaskType"]
