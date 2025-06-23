@@ -14,7 +14,7 @@ def default_preprocessing_func(text: str) -> List[str]:
 
 class BM25Retriever(BaseRetriever):
     vectorizer: Any = None
-    docs: List[Union[Document, str, Dict]] = Field(repr=False)
+    docs: List[Document] = Field(repr=False)
     k: int = _DEFAULT_TOP_K_BM25
     preprocess_func: Callable[[str], List[str]] = default_preprocessing_func
 
@@ -54,14 +54,14 @@ class BM25Retriever(BaseRetriever):
         metadatas = metadatas or ({} for _ in texts)
 
         docs = [
-            {
-                'text': text, 
-                'law_id': metadata.get('law_id', ''), 
-                'article_id': metadata.get('article_id', '')
-            }
+            Document(
+                text=text,
+                law_id=metadata.get("law_id", ""),
+                article_id=metadata.get("article_id", ""),
+            )
             for text, metadata in zip(texts, metadatas)
         ]
-        
+
         return cls(
             vectorizer=vectorizer, docs=docs, preprocess_func=preprocess_func, **kwargs
         )
