@@ -29,19 +29,12 @@ class Retriever:
     def __init__(
         self,
         retrievers: List[BaseRetriever],
-        weights: Optional[List[float]] = None,
         c: int = 60,
         id_key: Optional[str] = None,
     ):
         self._retrievers = retrievers
         self.c = c
         self.id_key = id_key
-        if weights is None:
-            self.weights = [1 / len(retrievers)] * len(retrievers)
-        else:
-            if len(weights) != len(retrievers):
-                raise ValueError("Number of weights must match number of retrievers.")
-            self.weights = weights
 
     def retrieve(self, query: str) -> List[Document]:
         """Perform retrieval from all base retrievers and apply rank fusion."""
@@ -66,9 +59,9 @@ class Retriever:
         return self.weighted_reciprocal_rank(doc_lists)
 
     def weighted_reciprocal_rank(
-        self, doc_lists: list[list[Document]]
+        self, doc_lists: list[list[Document]], weights: list[float]
     ) -> list[Document]:
-        if len(doc_lists) != len(self.weights):
+        if len(doc_lists) != len(weights):
             raise ValueError(
                 "Number of rank lists must be equal to the number of weights."
             )
@@ -76,7 +69,7 @@ class Retriever:
         # Associate each doc's content with its RRF score for later sorting by it
         # Duplicated contents across retrievers are collapsed & scored cumulatively
         rrf_score: dict[str, float] = defaultdict(float)
-        for doc_list, weight in zip(doc_lists, self.weights):
+        for doc_list, weight in zip(doc_lists, weights):
             for rank, doc in enumerate(doc_list, start=1):
                 rrf_score[
                     (
