@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Callable, Iterable, Iterator, List, TypeVar
+from typing import Callable, Iterable, Iterator, List, Optional, TypeVar
 from collections.abc import Hashable
 from itertools import chain
 
@@ -26,17 +26,37 @@ class Retriever:
     A class that combines multiple retrievers to provide a unified retrieval interface.
     """
 
-    def __init__(self, retrievers: List[BaseRetriever]):
+    def __init__(
+        self,
+        retrievers: List[BaseRetriever],
+        c: int = 60,
+        id_key: Optional[str] = None,
+    ):
         self._retrievers = retrievers
+        self.c = c
+        self.id_key = id_key
 
     def retrieve(self, query: str) -> List[Document]:
-        pass
+        """Perform retrieval from all base retrievers and apply rank fusion."""
+        return self.rank_fusion(query)
 
          
-    def rank_fusion(self, query) -> List[Document]:
-        doc_list = [
+    def rank_fusion(self, query: str) -> List[Document]:
+        """
+        Calls all retrievers and combines their results using weighted RRF.
+        """
+        doc_lists = [
             retriever.retrieve(query) for retriever in self._retrievers
         ]
+
+        # Ensure all items are Documents
+        for i in range(len(doc_lists)):
+            doc_lists[i] = [
+                doc if isinstance(doc, Document) else Document(page_content=str(doc))
+                for doc in doc_lists[i]
+            ]
+
+        return self.weighted_reciprocal_rank(doc_lists)
 
     def weighted_reciprocal_rank(
         self, doc_lists: list[list[Document]], weights: list[float]
@@ -49,7 +69,7 @@ class Retriever:
         # Associate each doc's content with its RRF score for later sorting by it
         # Duplicated contents across retrievers are collapsed & scored cumulatively
         rrf_score: dict[str, float] = defaultdict(float)
-        for doc_list, weight in zip(doc_lists, self.weights):
+        for doc_list, weight in zip(doc_lists, weights):
             for rank, doc in enumerate(doc_list, start=1):
                 rrf_score[
                     (
