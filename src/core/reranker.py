@@ -1,55 +1,77 @@
-from typing import List, Dict, Optional
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-import torch.nn.functional as F
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from pydantic import BaseModel, Field
+from typing import List, Dict, Union
+import time
 
-class BGEReranker:
-    _model = None
-    _tokenizer = None
 
-    def __init__(self, model_name='BAAI/bge-reranker-v2-m3', device: Optional[str] = None):
-        self.model_name = model_name
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        
-        if BGEReranker._model is None or BGEReranker._tokenizer is None:
-            BGEReranker._tokenizer = AutoTokenizer.from_pretrained(model_name)
-            BGEReranker._model = AutoModelForSequenceClassification.from_pretrained(model_name).to(self.device)
-            BGEReranker._model.eval()
+class RerankerConfig(BaseModel):
+    cross_encoder_model: str = Field(
+        default="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        description="The name of the Cross-Encoder model from Hugging Face."
+    )
+    batch_size: int = Field(
+        default=32,
+        description="Batch size for inference to optimize performance."
+    )
+    model_cache_dir: str | None = Field(
+        default=None,
+        description="Directory to cache downloaded models. If None, uses default Hugging Face cache."
+    )
 
-        self.tokenizer = BGEReranker._tokenizer
-        self.model = BGEReranker._model
 
-    def rerank(
-        self,
-        query: str,
-        documents: List[str],
-        top_n: Optional[int] = None,
-        max_token_per_doc: Optional[int] = None
-    ) -> List[Dict[str, float]]:
-        
-        pairs = []
-        for doc in documents:
-            if max_token_per_doc is not None:
-                tokens = self.tokenizer.tokenize(doc)
-                doc = self.tokenizer.convert_tokens_to_string(tokens[:max_token_per_doc])
-            pairs.append((query, doc))
+class Reranker:
+    def __init__(self, config: RerankerConfig):
+        print(f"\nInitializing Reranker with config: \n{config.model_dump_json(indent=2)}")
+        self.config = config
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"Using device: {self.device}")
 
-        # Tokenize batch
-        inputs = self.tokenizer(
-            pairs,
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-            max_length=512
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            self.config.cross_encoder_model,
+            cache_dir=self.config.model_cache_dir
+        )
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.config.cross_encoder_model,
+            cache_dir=self.config.model_cache_dir
         ).to(self.device)
+        self.model.eval()
+        print(f"Reranker OK\n")
 
+    def rerank(self, query: str, documents: List[Dict[str, Union[str, int, float]]]) -> List[Dict[str, Union[str, int, float]]]:
+        if not documents:
+            return []
+
+        if not all('text' in doc for doc in documents):
+            raise ValueError("All document dictionaries must contain a 'text' key.")
+
+        start_time = time.time()
+        
+        pairs = [(query, doc['text']) for doc in documents]
+
+        all_scores = []
         with torch.no_grad():
-            scores = self.model(**inputs, return_dict=True).logits.view(-1, ).float()
+            for i in range(0, len(pairs), self.config.batch_size):
+                batch_pairs = pairs[i:i + self.config.batch_size]
+                
+                inputs = self.tokenizer(
+                    batch_pairs,
+                    padding=True,
+                    truncation=True,
+                    return_tensors="pt",
+                    max_length=512
+                ).to(self.device)
 
-        scored_docs = [
-            {"index": idx, "relevance_score": score.item()}
-            for idx, score in enumerate(scores)
-        ]
-        scored_docs = sorted(scored_docs, key=lambda x: x["relevance_score"], reverse=True)
+                logits = self.model(**inputs).logits
+                scores = logits.view(-1, ).float()
+                all_scores.extend(scores.cpu().numpy().tolist())
 
-        return scored_docs[:top_n] if top_n is not None else scored_docs
+        for doc, score in zip(documents, all_scores):
+            doc['rerank_score'] = score
+            
+        sorted_documents = sorted(documents, key=lambda x: x['rerank_score'], reverse=True)
+        
+        end_time = time.time()
+        print(f"Reranking completed for {len(documents)} documents in {end_time - start_time:.4f} seconds.")
+
+        return sorted_documents

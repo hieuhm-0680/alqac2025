@@ -1,0 +1,39 @@
+system:
+  model_cache_dir: "/path/to/shared/models_cache"
+  output_dir: "output"
+  log_level: "INFO"
+
+data:
+  corpus_path: "data/processed/documents.parquet"
+  categories_path: "data/raw/document_categories.csv"
+  classifier_training_data: "data/training/classifier_data.jsonl"
+
+
+pipeline:
+  enable_local_retrieval: true
+  enable_global_retrieval: true
+  enable_reranker: true
+
+  local_retrieval:
+    classifier_model: "models/category_classifier_v1.2"
+    top_k_per_category: 20
+
+  global_retrieval:
+    lexical:
+      index_name: "docs_lexical_v2"
+      top_k: 100
+
+    semantic:
+      embedding_model: "sentence-transformers/msmarco-distilbert-base-v4"
+      top_k: 100
+      vector_db:
+        collection_name: "docs_semantic_v2"
+
+  rank_fusion:
+    # Method can be 'rrf' (Reciprocal Rank Fusion) or 'weighted_sum', etc.
+    method: "rrf"
+    top_n_candidates: 100
+
+  reranker:
+    cross_encoder_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    batch_size: 32
