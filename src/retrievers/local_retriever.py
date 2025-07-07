@@ -10,7 +10,7 @@ from pathlib import Path
 import chromadb
 import numpy as np
 
-from src.utils import preprocess_func_for_bm25
+from src.utils.preprocess_func_for_bm25 import preprocess_func_for_bm25
 
 class CategoryClassifierConfig(BaseModel):
     model_name_or_path: str = Field(default="vinai/phobert-base")

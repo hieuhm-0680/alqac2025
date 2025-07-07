@@ -4,9 +4,9 @@ import nltk
 
 def ensure_nltk_resources():
     try:
-        nltk.data.find('tokenizers/punkt')
+        nltk.data.find('tokenizers/punkt_tab')
     except LookupError:
-        nltk.download('punkt')
+        nltk.download('punkt_tab')
 
 
 from nltk.tokenize import word_tokenize
