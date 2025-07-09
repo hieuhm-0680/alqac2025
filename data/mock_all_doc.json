@@ -1,0 +1,8 @@
+[
+  {"id": "tech001", "text": "NVIDIA announced a new GPU for deep learning."},
+  {"id": "tech002", "text": "Quantum computing aims to solve complex problems."},
+  {"id": "fin001", "text": "Central banks are raising interest rates to combat inflation."},
+  {"id": "fin002", "text": "The stock market shows high volatility."},
+  {"id": "fin003", "text": "Investors are concerned about rising bond yields."},
+  {"id": "health001", "text": "A new study shows benefits of a Mediterranean diet."}
+]

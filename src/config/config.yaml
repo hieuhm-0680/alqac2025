@@ -7,6 +7,10 @@ data:
   corpus_path: "data/processed/documents.parquet"
   categories_path: "data/raw/document_categories.csv"
   classifier_training_data: "data/training/classifier_data.jsonl"
+  all_doc_path: "data/mock_all_doc.json"
+  local_doc_path: "data/mock_local_doc.json"
+  queries_path: "data/mock_queries.json"
+  output_path: "data/output.json"
 
 
 pipeline:

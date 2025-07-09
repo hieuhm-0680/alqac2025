@@ -18,6 +18,10 @@ class DataConfig(BaseModel):
     corpus_path: Path
     categories_path: Path
     classifier_training_data: Path
+    all_doc_path: Path
+    local_doc_path: Path
+    queries_path: Path
+    output_path: Path
 
 class VectorDBConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix='VECTOR_DB_')
