@@ -34,3 +34,7 @@ def preprocess_func_for_bm25(text: str) -> List[str]:
     text = text.lower()
     
     return tokenize_text(text)
+
+
+# def preprocess_func_for_bm25(text: str) -> List[str]:
+#     return text.lower().split(" ")

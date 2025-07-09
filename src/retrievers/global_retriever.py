@@ -8,6 +8,9 @@ from pathlib import Path
 import chromadb
 import numpy as np
 
+from src.utils.preprocess_func_for_bm25 import preprocess_func_for_bm25, tokenize_text
+
+
 class GlobalIndexConfig(BaseModel):
     index_dir: Path = Field(default=Path("data/global_indexes"))
     chroma_db_path: Path = Field(default=Path("data/global_indexes/chroma_db"))
@@ -47,7 +50,7 @@ def build_global_indexes(
     )
 
     print("\nBuilding global BM25 index...")
-    tokenized_corpus = [doc.lower().split(" ") for doc in doc_texts]
+    tokenized_corpus = [tokenize_text(doc.lower()) for doc in doc_texts]
     bm25_index_data = {
         'index': BM25Okapi(tokenized_corpus),
         'doc_ids': doc_ids
@@ -85,7 +88,7 @@ class GlobalRetriever:
         
         # --- Lexical Search ---
         print("\nPerforming global lexical search...")
-        tokenized_query = query.lower().split(" ")
+        tokenized_query = preprocess_func_for_bm25(query)
         bm25_scores = self.bm25_index_data['index'].get_scores(tokenized_query)
         top_bm25_indices = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)[:self.config.top_k_lexical]
         for i in top_bm25_indices:

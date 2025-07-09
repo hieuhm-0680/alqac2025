@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Callable, Dict, Iterable, Iterator, List, Optional, TypeVar, Union
 from collections.abc import Hashable
 from itertools import chain
+from pydantic import BaseModel, Field
 
 
 # from torch import T
@@ -23,20 +24,28 @@ from ..retrievers.base import BaseRetriever
 #             seen.add(k)
 #             yield e
 
+class RankFusionConfig(BaseModel):
+    k: int = 60
+    method: str = Field(default='rrf')
+
 class RankFusion:
-    def __init__(self, k: int = 60):
-        self.k = k
+    def __init__(self, config: RankFusionConfig):
+        self.config = config
 
     def fuse(self, ranked_lists: List[List[Dict]]) -> List[Dict]:
         scores = {}
         # Aggregate scores from all lists
-        for doc_list in ranked_lists:
+        for list_idx, doc_list in enumerate(ranked_lists):
             for i, doc in enumerate(doc_list):
                 doc_id = doc['id']
                 if doc_id not in scores:
                     scores[doc_id] = {'score': 0, 'doc': doc}
-                # The RRF formula: 1 / (k + rank)
-                scores[doc_id]['score'] += 1 / (self.k + i + 1)
+                
+                if self.config.method == 'rrf': # The RRF formula: 1 / (k + rank)
+                    scores[doc_id]['score'] += 1 / (self.config.k + i + 1)
+                elif self.config.method == 'weighted_sum':
+                    doc_score = doc.get('score', 1/(i+1))
+                    scores[doc_id]['score'] += self.config.weights[list_idx] * doc_score
 
         # Sort documents by their new aggregated RRF score
         sorted_docs_with_scores = sorted(
@@ -92,14 +101,15 @@ class RankFusion:
 class Retriever:
     def __init__(self, 
                  local_retriever_config: LocalRetrieverConfig, 
-                 global_retriever_config: GlobalRetrieverConfig, 
+                 global_retriever_config: GlobalRetrieverConfig,
+                 rank_fusion_config: RankFusionConfig, 
                  reranker_config: RerankerConfig):
         
         print("--- Initializing Full Search Pipeline ---")
         # Initialize each component
         self.local_retriever = LocalRetriever(local_retriever_config)
         self.global_retriever = GlobalRetriever(global_retriever_config)
-        self.rank_fusion = RankFusion()
+        self.rank_fusion = RankFusion(rank_fusion_config)
         self.reranker = Reranker(reranker_config)
 
     def retrieve(self, query: str) -> List[Dict[str, Union[str, float]]]:
@@ -136,6 +146,7 @@ if __name__ == '__main__':
         classifier=({"candidate_labels": list(local_doc_store.keys())})
     )
     global_config = GlobalRetrieverConfig()
+    rank_fusion_config = RankFusionConfig()
     reranker_config = RerankerConfig()
     
     # ======================================================================
@@ -153,6 +164,7 @@ if __name__ == '__main__':
     pipeline = Retriever(
         local_retriever_config=local_config,
         global_retriever_config=global_config,
+        rank_fusion_config=rank_fusion_config,
         reranker_config=reranker_config
     )
 
