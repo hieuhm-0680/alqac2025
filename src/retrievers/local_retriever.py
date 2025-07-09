@@ -10,17 +10,17 @@ from pathlib import Path
 import chromadb
 import numpy as np
 
-from src.utils import preprocess_func_for_bm25
+from src.utils.preprocess_func_for_bm25 import preprocess_func_for_bm25, tokenize_text
 
 class CategoryClassifierConfig(BaseModel):
     model_name_or_path: str = Field(default="vinai/phobert-base")
     top_k: int = 3
     model_cache_dir: str | None = None
 
-class IndexConfig(BaseModel):
-    index_dir: Path = Field(default=Path("data/processed_indexes"))
-    chroma_db_path: Path = Field(default=Path("data/processed_indexes/chroma_db"))
-    bm25_path: Path = Field(default=Path("data/processed_indexes/bm25_indexes.pkl"))
+class LocalIndexConfig(BaseModel):
+    index_dir: Path = Field(default=Path("data/local_indexes"))
+    chroma_db_path: Path = Field(default=Path("data/local_indexes/chroma_db"))
+    bm25_path: Path = Field(default=Path("data/local_indexes/bm25_local.pkl"))
 
 class LocalRetrieverConfig(BaseModel):
     classifier: CategoryClassifierConfig = Field(default_factory=CategoryClassifierConfig)
@@ -28,7 +28,7 @@ class LocalRetrieverConfig(BaseModel):
     classification_threshold: float = Field(default=0.7)
     top_k_lexical: int = Field(default=5)
     top_k_semantic: int = Field(default=5)
-    indexes: IndexConfig = Field(default_factory=IndexConfig)
+    indexes: LocalIndexConfig = Field(default_factory=LocalIndexConfig)
 
 
 def build_local_indexes(
@@ -61,7 +61,7 @@ def build_local_indexes(
             ids=doc_ids
         )
         print(f"Building BM25 index for '{category}'...")
-        tokenized_corpus = [doc.lower().split(" ") for doc in doc_texts]
+        tokenized_corpus = [tokenize_text(doc.lower()) for doc in doc_texts]
         bm25_indexes[category] = {
             'index': BM25Okapi(tokenized_corpus),
             'doc_ids': doc_ids 
@@ -145,16 +145,23 @@ class LocalRetriever:
 # --------------------------------------------------------------------------
 
 if __name__ == '__main__':
+    # mock_document_store = {
+    #     "technology": [{'id': 'tech001', 'text': 'NVIDIA ...'}, {'id': 'tech002', 'text': 'Quantum ...'}],
+    #     "finance": [
+    #         {'id': 'fin001', 'text': 'Central banks are raising interest rates to combat inflation.'},
+    #         {'id': 'fin002', 'text': 'The stock market shows high volatility.'},
+    #         {'id': 'fin003', 'text': 'Investors are concerned about rising bond yields.'},
+    #     ],
+    #     "health": [] 
+    # }
     mock_document_store = {
-        "technology": [{'id': 'tech001', 'text': 'NVIDIA ...'}, {'id': 'tech002', 'text': 'Quantum ...'}],
-        "finance": [
+        "LABEL_0": [{'id': 'tech001', 'text': 'NVIDIA ...'}, {'id': 'tech002', 'text': 'Quantum ...'}],
+        "LABEL_1": [
             {'id': 'fin001', 'text': 'Central banks are raising interest rates to combat inflation.'},
             {'id': 'fin002', 'text': 'The stock market shows high volatility.'},
             {'id': 'fin003', 'text': 'Investors are concerned about rising bond yields.'},
         ],
-        "health": [] 
     }
-    
     config = LocalRetrieverConfig(
         classifier=CategoryClassifierConfig(candidate_labels=list(mock_document_store.keys()))
     )
@@ -176,4 +183,4 @@ if __name__ == '__main__':
             print(f"  - ID: {doc.get('id')}, Text: \"{doc.get('text', 'N/A - from lexical search')}\"")
     
     print("\n--- Demo Finished ---")
-
+    
