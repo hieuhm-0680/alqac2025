@@ -1,0 +1,17 @@
+[
+  {
+    "question_id": "Q1",
+    "question_type": "information",
+    "text": "Which company has announced a new GPU for deep learning?"
+  },
+  {
+    "question_id": "Q2",
+    "question_type": "concept",
+    "text": "What is the aim of quantum computing?"
+  },
+  {
+    "question_id": "Q3",
+    "question_type": "fact",
+    "text": "What are the financial implications of new technology?"
+  }
+]

@@ -7,32 +7,45 @@ data:
   corpus_path: "data/processed/documents.parquet"
   categories_path: "data/raw/document_categories.csv"
   classifier_training_data: "data/training/classifier_data.jsonl"
+  all_doc_path: "data/mock_all_doc.json"
+  local_doc_path: "data/mock_local_doc.json"
+  queries_path: "data/mock_queries.json"
+  output_path: "data/output.json"
 
 
 pipeline:
-  enable_local_retrieval: true
-  enable_global_retrieval: true
+  enable_local_retriever: true
+  enable_global_retriever: true
   enable_reranker: true
 
-  local_retrieval:
-    classifier_model: "models/category_classifier_v1.2"
-    top_k_per_category: 20
+  local_retriever:
+    classifier:
+      model_name_or_path: "vinai/phobert-base"
+      top_k: 5
+      #model_cache_dir: None
+    embedding_model_name_or_path: "all-MiniLM-L6-v2"
+    classification_threshold: 0.7
+    top_k_lexical: 5
+    top_k_semantic: 5
+    indexes:
+      index_dir: "data/local_indexes"
+      chroma_db_path: "data/local_indexes/chroma_db"
+      bm25_path: "data/local_indexes/bm25_local.pkl"
 
-  global_retrieval:
-    lexical:
-      index_name: "docs_lexical_v2"
-      top_k: 100
-
-    semantic:
-      embedding_model: "sentence-transformers/msmarco-distilbert-base-v4"
-      top_k: 100
-      vector_db:
-        collection_name: "docs_semantic_v2"
+  global_retriever:
+    embedding_model_name: "all-MiniLM-L6-v2"
+    top_k_lexical: 50
+    top_k_semantic: 50
+    indexes:
+      index_dir: "data/global_indexes"
+      chroma_db_path: "data/global_indexes/chroma_db"
+      bm25_path: "data/global_indexes/bm25_global.pkl"
+    chroma_collection_name: "global_documents"
 
   rank_fusion:
-    # Method can be 'rrf' (Reciprocal Rank Fusion) or 'weighted_sum', etc.
-    method: "rrf"
+    method: "rrf" # Method can be 'rrf' (Reciprocal Rank Fusion) or 'weighted_sum', etc.
     top_n_candidates: 100
+    weights: [0.5, 0.5]  # Use for 'weighted_sum'
 
   reranker:
     cross_encoder_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
