@@ -1,0 +1,17 @@
+[
+  {
+    "question_id": "q001",
+    "question_type": "luat",
+    "text": "Người lao động được hưởng những quyền lợi gì về bảo hiểm xã hội?"
+  },
+  {
+    "question_id": "q002",
+    "question_type": "chinh_sach",
+    "text": "Nguyên tắc xử phạt vi phạm hành chính là gì?"
+  },
+  {
+    "question_id": "q003",
+    "question_type": "luat",
+    "text": "Quyền tự do báo chí được quy định như thế nào theo pháp luật?"
+  }
+]

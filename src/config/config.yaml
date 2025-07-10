@@ -7,9 +7,9 @@ data:
   corpus_path: "data/processed/documents.parquet"
   categories_path: "data/raw/document_categories.csv"
   classifier_training_data: "data/training/classifier_data.jsonl"
-  all_doc_path: "data/mock_all_doc.json"
-  local_doc_path: "data/mock_local_doc.json"
-  queries_path: "data/mock_queries.json"
+  all_doc_path: "data/mock_all_doc_2.json"
+  local_doc_path: "data/mock_local_doc_2.json"
+  queries_path: "data/mock_queries_2.json"
   output_path: "data/output.json"
 
 
@@ -34,13 +34,15 @@ pipeline:
 
   global_retriever:
     embedding_model_name: "all-MiniLM-L6-v2"
-    top_k_lexical: 50
     top_k_semantic: 50
     indexes:
       index_dir: "data/global_indexes"
       chroma_db_path: "data/global_indexes/chroma_db"
-      bm25_path: "data/global_indexes/bm25_global.pkl"
+      lexical_path: "data/global_indexes/bm25_global.pkl"
     chroma_collection_name: "global_documents"
+    lexical_ensemble_config:
+      k: 50
+      weights: [1.0, 1.0, 1.0]
 
   rank_fusion:
     method: "rrf" # Method can be 'rrf' (Reciprocal Rank Fusion) or 'weighted_sum', etc.

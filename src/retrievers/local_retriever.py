@@ -11,6 +11,7 @@ import chromadb
 import numpy as np
 
 from src.utils.preprocess_func_for_bm25 import preprocess_func_for_bm25, tokenize_text
+from src.models.schemas import Document
 
 class CategoryClassifierConfig(BaseModel):
     model_name_or_path: str = Field(default="vinai/phobert-base")
@@ -50,9 +51,9 @@ def build_local_indexes(
         collection_name = f"{category}"
         collection = client.get_or_create_collection(name=collection_name)
         
-        doc_texts = [doc['text'] for doc in docs]
+        doc_texts = [doc.text for doc in docs]
         # doc_ids = None # TODO: fill here if needed
-        doc_ids = [doc['id'] for doc in docs] if 'id' in docs[0] else [str(i) for i in range(len(doc_texts))]
+        doc_ids = [doc.id for doc in docs]
         
         embeddings = embedding_model.encode(doc_texts, convert_to_numpy=True)
         collection.add(
@@ -115,6 +116,7 @@ class LocalRetriever:
             if category not in self.bm25_indexes: continue
             # Lexical Search
             bm25_data = self.bm25_indexes[category]
+            print(bm25_data)
             tokenized_query = preprocess_func_for_bm25(query)
 
             # TODO: check from here
@@ -154,14 +156,59 @@ if __name__ == '__main__':
     #     ],
     #     "health": [] 
     # }
+    # mock_document_store = {
+    #     "LABEL_0": [{'id': 'tech001', 'text': 'NVIDIA ...'}, {'id': 'tech002', 'text': 'Quantum ...'}],
+    #     "LABEL_1": [
+    #         {'id': 'fin001', 'text': 'Central banks are raising interest rates to combat inflation.'},
+    #         {'id': 'fin002', 'text': 'The stock market shows high volatility.'},
+    #         {'id': 'fin003', 'text': 'Investors are concerned about rising bond yields.'},
+    #     ],
+    # }
+
+    docs = [
+    Document(
+        law_id="pl001",
+        article_id="1",
+        text="Người lao động có quyền được hưởng chế độ bảo hiểm xã hội theo quy định của pháp luật."
+    ),
+    Document(
+        law_id="pl002",
+        article_id="2",
+        text="Việc xử phạt vi phạm hành chính phải dựa trên nguyên tắc khách quan, công bằng."
+    ),
+    Document(
+        law_id="pl003",
+        article_id="3",
+        text="Mọi công dân đều có quyền tự do ngôn luận, tự do báo chí theo Hiến pháp nước Cộng hoà xã hội chủ nghĩa Việt Nam."
+    ),
+    Document(
+        law_id="cn001",
+        article_id="1",
+        text="Trí tuệ nhân tạo đang được ứng dụng rộng rãi trong lĩnh vực chăm sóc sức khỏe và giáo dục."
+    ),
+    Document(
+        law_id="yt001",
+        article_id="1",
+        text="Bộ Y tế khuyến cáo người dân nên tiêm vắc-xin phòng bệnh theo đúng lịch trình để đảm bảo hiệu quả bảo vệ."
+    ),
+    Document(
+        law_id="kt001",
+        article_id="1",
+        text="Tăng trưởng GDP quý 1 năm nay đạt mức 5,8% nhờ vào sự phục hồi mạnh mẽ của ngành du lịch và xuất khẩu."
+    ),
+    Document(
+        law_id="mt001",
+        article_id="1",
+        text="Luật bảo vệ môi trường yêu cầu các doanh nghiệp phải đánh giá tác động môi trường trước khi triển khai dự án."
+    ),
+]
+
     mock_document_store = {
-        "LABEL_0": [{'id': 'tech001', 'text': 'NVIDIA ...'}, {'id': 'tech002', 'text': 'Quantum ...'}],
-        "LABEL_1": [
-            {'id': 'fin001', 'text': 'Central banks are raising interest rates to combat inflation.'},
-            {'id': 'fin002', 'text': 'The stock market shows high volatility.'},
-            {'id': 'fin003', 'text': 'Investors are concerned about rising bond yields.'},
-        ],
+    "LABEL_0": [docs[0], docs[1]],         # Lao động, Hành chính
+    "LABEL_1": [docs[2], docs[3], docs[4]],# Tự do, Công nghệ, Y tế
+    "LABEL_2": [docs[5], docs[6]],         # Kinh tế, Môi trường
     }
+
     config = LocalRetrieverConfig(
         classifier=CategoryClassifierConfig(candidate_labels=list(mock_document_store.keys()))
     )
@@ -173,7 +220,7 @@ if __name__ == '__main__':
     print("\n\n--- Simulating Application Startup ---")
     retriever = LocalRetriever(config=config)
     
-    search_query = "What is the latest news on equities?"
+    search_query = "Quyền tự do ngôn luận của công dân là gì?"
     print(f"\nPerforming retrieval for query: '{search_query}'")
     results = retriever.retrieve(search_query)
 

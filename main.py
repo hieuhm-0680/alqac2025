@@ -62,6 +62,7 @@ from src.config.config import load_config
 from src.core.retriever import Retriever
 from src.retrievers.global_retriever import build_global_indexes
 from src.retrievers.local_retriever import build_local_indexes
+from src.models.schemas import Document
 
 def main(config_path: str):
     # all_docs = [
@@ -78,7 +79,43 @@ def main(config_path: str):
     #     "LABEL_1": [all_docs[2], all_docs[3], all_docs[4]],
     #     "LABEL_2": [all_docs[5]]
     # }
-
+    docs = [
+        Document(
+            law_id="pl001",
+            article_id="1",
+            text="Người lao động có quyền được hưởng chế độ bảo hiểm xã hội theo quy định của pháp luật."
+        ),
+        Document(
+            law_id="pl002",
+            article_id="2",
+            text="Việc xử phạt vi phạm hành chính phải dựa trên nguyên tắc khách quan, công bằng."
+        ),
+        Document(
+            law_id="pl003",
+            article_id="3",
+            text="Mọi công dân đều có quyền tự do ngôn luận, tự do báo chí theo Hiến pháp nước Cộng hoà xã hội chủ nghĩa Việt Nam."
+        ),
+        Document(
+            law_id="cn001",
+            article_id="1",
+            text="Trí tuệ nhân tạo đang được ứng dụng rộng rãi trong lĩnh vực chăm sóc sức khỏe và giáo dục."
+        ),
+        Document(
+            law_id="yt001",
+            article_id="1",
+            text="Bộ Y tế khuyến cáo người dân nên tiêm vắc-xin phòng bệnh theo đúng lịch trình để đảm bảo hiệu quả bảo vệ."
+        ),
+        Document(
+            law_id="kt001",
+            article_id="1",
+            text="Tăng trưởng GDP quý 1 năm nay đạt mức 5,8% nhờ vào sự phục hồi mạnh mẽ của ngành du lịch và xuất khẩu."
+        ),
+        Document(
+            law_id="mt001",
+            article_id="1",
+            text="Luật bảo vệ môi trường yêu cầu các doanh nghiệp phải đánh giá tác động môi trường trước khi triển khai dự án."
+        ),
+    ]
     # 1. Load the master configuration object
     config = load_config(config_path)
 
@@ -108,7 +145,11 @@ def main(config_path: str):
 
     
     all_docs = json.load(open(config.data.all_doc_path, 'r', encoding='utf-8'))
+    all_docs = [Document(**d) for d in all_docs]
+
     local_doc = json.load(open(config.data.local_doc_path, 'r', encoding='utf-8'))
+    local_doc = {label: [Document(**d) for d in doc_list] for label, doc_list in local_doc.items()}
+
     queries = json.load(open(config.data.queries_path, 'r', encoding='utf-8'))
     texts = [item['text'] for item in queries] # Might have format error
 

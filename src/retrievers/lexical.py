@@ -143,3 +143,6 @@ class LexicalEnsembleRetriever(BaseRetriever):
         for key in kwargs:
             if key not in known_params:
                 print(f"Warning: Unknown config parameter '{key}'")
+
+if __name__ == '__main__':
+    pass
