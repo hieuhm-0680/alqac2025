@@ -23,7 +23,7 @@ pipeline:
       model_name_or_path: "vinai/phobert-base"
       top_k: 5
       #model_cache_dir: None
-    embedding_model_name_or_path: "all-MiniLM-L6-v2"
+    embedding_model_name_or_path: "BAAI/bge-m3" # VoVanPhuc/sup-SimCSE-VietNamese-phobert-base
     classification_threshold: 0.7
     top_k_lexical: 5
     top_k_semantic: 5
@@ -33,7 +33,7 @@ pipeline:
       bm25_path: "data/local_indexes/bm25_local.pkl"
 
   global_retriever:
-    embedding_model_name: "all-MiniLM-L6-v2"
+    embedding_model_name: "VoVanPhuc/sup-SimCSE-VietNamese-phobert-base" # BAAI/bge-m3
     top_k_lexical: 50
     top_k_semantic: 50
     indexes:
@@ -48,5 +48,5 @@ pipeline:
     weights: [0.5, 0.5]  # Use for 'weighted_sum'
 
   reranker:
-    cross_encoder_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    cross_encoder_model: "BAAI/bge-reranker-v2-m3"
     batch_size: 32

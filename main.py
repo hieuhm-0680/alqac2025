@@ -82,6 +82,8 @@ def main(query: str, config_path: str):
     config = load_config(config_path)
 
     print(f"Running query: '{query}'")
+    print(f"Embedding model in local retriever: {config.pipeline.local_retriever.embedding_model_name_or_path}")
+    print(f"Embedding model in global retriever: {config.pipeline.global_retriever.embedding_model_name}")
     print(f"Reranker model: {config.pipeline.reranker.cross_encoder_model}")
     print(f"Vector DB Host: {config.pipeline.global_retriever.chroma_collection_name}")
 
