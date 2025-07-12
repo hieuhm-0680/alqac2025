@@ -23,10 +23,14 @@ class TaskType(str, Enum):
 
 class Document(BaseModel):
     """Legal document model."""
-
     law_id: str = Field(..., description="Law identifier")
     article_id: str = Field(..., description="Article identifier")
     text: str = Field(..., description="Full text of the article")
+
+    @property
+    def id(self) -> str:
+        # Concat law_id and article_id
+        return f"{self.law_id}|{self.article_id}"
 
 class QuestionBase(BaseModel):
     """Base question model."""
