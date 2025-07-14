@@ -1,1 +1,1 @@
-"""Core package initialization."""
+from .preprocess_func_for_bm25 import preprocess_func_for_bm25

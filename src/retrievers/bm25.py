@@ -3,20 +3,16 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 from pydantic import Field
 
 from src.models.schemas import Document
+from src.utils import preprocess_func_for_bm25
 from .base import BaseRetriever
 
 _DEFAULT_TOP_K_BM25 = 10
-
-
-def default_preprocessing_func(text: str) -> List[str]:
-    return text.split()
-
 
 class BM25Retriever(BaseRetriever):
     vectorizer: Any = None
     docs: List[Document] = Field(repr=False)
     k: int = _DEFAULT_TOP_K_BM25
-    preprocess_func: Callable[[str], List[str]] = default_preprocessing_func
+    preprocess_func: Callable[[str], List[str]] = preprocess_func_for_bm25
 
     class Config:
         arbitrary_types_allowed = True
@@ -29,6 +25,14 @@ class BM25Retriever(BaseRetriever):
         top_indices = scores.argsort()[::-1][:self.k]
         results = [self.docs[i] for i in top_indices]
         return results
+    
+    def _get_relevant_documents_with_scores(self, query) -> List[Tuple[Document, float]]:
+        processed_query = self.preprocess_func(query)
+        scores = self.vectorizer.get_scores(processed_query)
+        top_indices = scores.argsort()[::-1][:self.k]
+        results = [(self.docs[i], scores[i]) for i in top_indices]
+        return results
+        
 
     @classmethod
     def from_texts(
@@ -37,7 +41,7 @@ class BM25Retriever(BaseRetriever):
         metadatas: Optional[Iterable[dict]] = None,
         bm25_params: Optional[Dict[str, Any]] = None,
         preprocess_func: Callable[[str], List[str]
-                                  ] = default_preprocessing_func,
+                                  ] = preprocess_func_for_bm25,
         **kwargs: Any,
     ) -> BaseRetriever:
         try:
@@ -72,7 +76,8 @@ class BM25Retriever(BaseRetriever):
         documents: Iterable[Document],
         bm25_params: Optional[Dict[str, Any]] = None,
         preprocess_func: Callable[[str], List[str]
-                                  ] = default_preprocessing_func,
+                                  ] = preprocess_func_for_bm25,
+        k: int = _DEFAULT_TOP_K_BM25,
         **kwargs: Any,
     ) -> BaseRetriever:
         try:

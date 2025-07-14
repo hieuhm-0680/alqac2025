@@ -3,12 +3,18 @@ from typing import Any, Callable, Dict, Iterable, List, Optional
 from pydantic import Field
 
 from src.models.schemas import Document
+import re
 from .base import BaseRetriever
 
 _DEFAULT_TOP_K_TFIDF = 10
 
 
 def default_preprocessing_func(text: str) -> str:
+    text = text.replace("\xAD", "")
+    text = re.sub(r"[\r\n\t]+", " ", text)
+    text = re.sub(r"http\S+|www\.\S+", "<url>", text)
+    text = " ".join(text.split())
+    text = text.lower()
     return text
 
 
@@ -35,6 +41,20 @@ class TFIDFRetriever(BaseRetriever):
         scores = cosine_similarity(self.tfidf_array, query_vec).flatten()
         top_indices = scores.argsort()[::-1][:self.k]
         return [self.docs[i] for i in top_indices]
+    
+    def _get_relevant_documents_with_scores(self, query):
+        try:
+            from sklearn.metrics.pairwise import cosine_similarity
+        except ImportError:
+            raise ImportError(
+                "Could not import scikit-learn. Please install it with `pip install scikit-learn`."
+            )
+
+        processed_query = self.preprocess_func(query)
+        query_vec = self.vectorizer.transform([processed_query])
+        scores = cosine_similarity(self.tfidf_array, query_vec).flatten()
+        top_indices = scores.argsort()[::-1][:self.k]
+        return [(self.docs[i], scores[i]) for i in top_indices]
 
     @classmethod
     def from_texts(

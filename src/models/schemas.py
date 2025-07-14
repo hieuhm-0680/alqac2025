@@ -29,8 +29,9 @@ class Document(BaseModel):
 
     @property
     def id(self) -> str:
-        # Concat law_id and article_id
         return f"{self.law_id}|{self.article_id}"
+    def __str__(self) -> str:
+        return f"Law ID: {self.law_id}\nArticle ID: {self.article_id}\n{self.text[:50] if len(self.text) > 50 else self.text}..."
 
 class QuestionBase(BaseModel):
     """Base question model."""
@@ -43,7 +44,7 @@ class QuestionBase(BaseModel):
 class TrainingQuestion(QuestionBase):
     """Training question with answer and relevant articles."""
 
-    relevant_documents: List[Document] = Field(
+    relevant_articles: List[Document] = Field(
         ..., description="List of relevant legal articles"
     )
     choices: Optional[Dict[str, str]] = Field(

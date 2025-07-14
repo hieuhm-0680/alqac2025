@@ -5,18 +5,12 @@ import math
 from pydantic import Field, field_validator
 
 from src.models.schemas import Document
+from src.utils import preprocess_func_for_bm25
 from .base import BaseRetriever
 
 
 _DEFAULT_TOP_K_QLD = 10
 _DEFAULT_MU = 1500
-
-
-def default_preprocessing_func(text: str) -> List[str]:
-    if not text:
-        return []
-    return text.lower().split()
-
 
 class QLDRetriever(BaseRetriever):
     """Query Likelihood with Dirichlet Smoothing Retriever.
@@ -28,7 +22,7 @@ class QLDRetriever(BaseRetriever):
     docs: List[Document] = Field(repr=False)
     k: int = _DEFAULT_TOP_K_QLD
     mu: int = _DEFAULT_MU
-    preprocess_func: Callable[[str], List[str]] = default_preprocessing_func
+    preprocess_func: Callable[[str], List[str]] = preprocess_func_for_bm25
 
     # Corpus-level statistics
     doc_tokens: List[List[str]] = Field(default_factory=list, repr=False)
@@ -97,6 +91,48 @@ class QLDRetriever(BaseRetriever):
             
         top_indices = sorted(doc_scores, key=lambda x: x[1], reverse=True)[:self.k]
         return [self.docs[i] for i, _ in top_indices]
+    
+    def _get_relevant_documents_with_scores(self, query: str) -> List[tuple[Document, float]]:
+        """Retrieve relevant documents and their scores using Query Likelihood with Dirichlet smoothing."""
+        # Handle edge cases
+        if not query or not query.strip():
+            return []
+        
+        if not self.docs:
+            return []
+
+        query_tokens = self.preprocess_func(query)
+        if not query_tokens:
+            return []
+
+        doc_scores = []
+
+        for idx, (counter, length) in enumerate(zip(self.doc_counters, self.doc_lengths)):
+            if length == 0:
+                continue  # Skip empty documents
+            
+            score = 0.0
+            for token in query_tokens:
+                tf = counter.get(token, 0)
+                cf = self.corpus_counter.get(token, 0)
+                
+                # Collection probability
+                pwc = cf / self.corpus_length if self.corpus_length > 0 else 1e-10
+                
+                # Dirichlet smoothing
+                prob = (tf + self.mu * pwc) / (length + self.mu)
+                
+                score += math.log(max(prob, 1e-10))  # Safe log
+
+            doc_scores.append((idx, score))
+
+        if not doc_scores:
+            return []
+
+        top_indices = sorted(doc_scores, key=lambda x: x[1], reverse=True)[:self.k]
+
+        return [(self.docs[i], score) for i, score in top_indices]
+
 
     def get_scores(self, query: str) -> List[tuple[int, float]]:
         """Get document indices and their scores for the query."""
@@ -128,7 +164,7 @@ class QLDRetriever(BaseRetriever):
     def from_documents(
         cls,
         documents: Iterable[Document],
-        preprocess_func: Callable[[str], List[str]] = default_preprocessing_func,
+        preprocess_func: Callable[[str], List[str]] = preprocess_func_for_bm25,
         k: int = _DEFAULT_TOP_K_QLD,
         mu: int = _DEFAULT_MU,
         **kwargs: Any

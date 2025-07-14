@@ -1,6 +1,6 @@
 
 from abc import abstractmethod
-from typing import List
+from typing import List, Tuple
 
 from pydantic import BaseModel
 
@@ -18,6 +18,11 @@ class BaseRetriever(BaseModel):
     """
     @abstractmethod
     def _get_relevant_documents(self, query: str) -> List[Document]:
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    @abstractmethod
+    def _get_relevant_documents_with_scores(self, query: str) -> List[Tuple[Document, float]]:
+        """Retrieve documents with their associated scores."""
         raise NotImplementedError("Subclasses must implement this method.")
 
     def retrieve(self, query: str) -> List[Document]:
