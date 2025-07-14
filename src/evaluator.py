@@ -145,7 +145,9 @@ class Evaluator:
             Evaluator.save_results_to_file(
                 results, save_to_file, task_type="retrieval")
 
-        return results
+        # sort results by metric name
+        sorted_results = dict(sorted(results.items()))
+        return sorted_results
 
     @staticmethod
     def _calculate_average_precision(pred_articles: List[Tuple], gt_articles: set) -> float:

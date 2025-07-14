@@ -17,8 +17,6 @@ class SystemConfig(BaseModel):
 
 class DataConfig(BaseModel):
     law_path: str
-    all_doc_path: str
-    local_doc_path: str
     queries_path: str
     output_path: str
 

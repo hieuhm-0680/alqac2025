@@ -24,8 +24,6 @@ def get_base_config() -> Dict[str, Any]:
         },
         "data": {
             "law_path": "dataset/alqac25_law.json",
-            "all_doc_path": "data/mock_all_doc_2.json",
-            "local_doc_path": "data/mock_local_doc_2.json",
             "queries_path": "dataset/alqac25_train.json",
             "output_path": "data/output.json"
         },
@@ -40,10 +38,10 @@ def get_base_config() -> Dict[str, Any]:
             "save_results_path": "output/final_results.json",
             "local_retriever": {
                 "classifier": {
-                    "model_name_or_path": "model/classifier",
-                    "top_k": 3
+                    "model_name_or_path": "hiuminee/alqac25-classifier-phobert-base",
+                    "top_k": 1
                 },
-                "embedding_model_name_or_path": "all-MiniLM-L6-v2",
+                "embedding_model_name_or_path": "AITeamVN/Vietnamese_Embedding",
                 "top_k_lexical": 15,
                 "top_k_semantic": 15,
                 "enable_lexical_search": True,
@@ -55,8 +53,8 @@ def get_base_config() -> Dict[str, Any]:
                 }
             },
             "global_retriever": {
-                "embedding_model_name": "all-MiniLM-L6-v2",
-                "top_k_semantic": 50,
+                "embedding_model_name": "AITeamVN/Vietnamese_Embedding",
+                "top_k_semantic": 20,
                 "enable_lexical_search": True,
                 "enable_semantic_search": True,
                 "indexes": {
@@ -66,7 +64,7 @@ def get_base_config() -> Dict[str, Any]:
                 },
                 "chroma_collection_name": "global_documents",
                 "lexical_ensemble_config": {
-                    "k": 50,
+                    "k": 100,
                     "weights": [0.5, 0.2, 0.3],
                     "enable_bm25": True,
                     "enable_tfidf": True,
@@ -75,10 +73,10 @@ def get_base_config() -> Dict[str, Any]:
             },
             "rank_fusion": {
                 "method": "rrf",
-                "top_n_candidates": 20
+                "top_n_candidates": 10
             },
             "reranker": {
-                "cross_encoder_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+                "cross_encoder_model": "AITeamVN/Vietnamese_Reranker",
                 "batch_size": 2
             }
         }

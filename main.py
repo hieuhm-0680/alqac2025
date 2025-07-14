@@ -2,7 +2,7 @@ import json
 import argparse
 import os
 from typing import Dict, Tuple
-from git import List
+from typing import List
 from src.config.config import load_config
 from src.core.retriever import Retriever
 from src.retrievers.global_retriever import build_global_indexes
@@ -88,7 +88,8 @@ def main(config_path: str, build_indexes: bool):
 
     if config.pipeline.enable_reranker:
         reranker_config = config.pipeline.reranker
-        rank_fusion_config = config.pipeline.rank_fusion
+
+    rank_fusion_config = config.pipeline.rank_fusion
 
     all_docs, local_docs, queries = load_data(
         config.data.law_path, config.data.queries_path
@@ -99,8 +100,10 @@ def main(config_path: str, build_indexes: bool):
     # ======================================================================
     if build_indexes:
         logger.info("--- Running Offline Indexing for All Components ---")
-        build_local_indexes(local_retriever_config, local_docs)
-        build_global_indexes(global_retriever_config, all_docs)
+        if local_retriever_config:
+            build_local_indexes(local_retriever_config, local_docs)
+        if global_retriever_config:
+            build_global_indexes(global_retriever_config, all_docs)
         logger.info("\n--- All Indexing Complete ---\n")
 
     # ======================================================================
@@ -118,7 +121,6 @@ def main(config_path: str, build_indexes: bool):
         save_reranked_path=config.pipeline.save_reranked_path,
     )
     results = []
-    queries = queries[:2]
     for query in queries:
         logger.info(f"Processing query {query.question_id}: {query.text}")
         final_ranked_docs = pipeline.retrieve(query.text)
