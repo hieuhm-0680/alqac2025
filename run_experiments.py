@@ -107,21 +107,19 @@ def run_single_experiment(config_info: Dict, config_dir: str, results_base_dir: 
     main_result = run_command(main_cmd, cwd=workspace_dir)
     if main_result.returncode != 0:
         print(f"❌ Failed to run main.py for {config_name}")
-        # Try to build index and rerun
         print("🔄 Attempting to build index and retry experiment...")
         build_index_cmd = [sys.executable, "main.py", "--build_indexes", "1", "--config", dest_config]
         build_result = run_command(build_index_cmd, cwd=workspace_dir)
         if build_result.returncode == 0:
-            print("✅ Index built successfully. Retrying main.py...")
-            main_result = run_command(main_cmd, cwd=workspace_dir)
-        if main_result.returncode != 0:
-            print(f"❌ Failed again to run main.py for {config_name}")
-            # Save error log
+            print("✅ Index built successfully. Skipping retry of main.py since evaluation is included.")
+            main_result = build_result  # Use build_result as main_result for output checks
+        else:
+            print(f"❌ Failed to build index for {config_name}")
             with open(os.path.join(experiment_dir, "error_log.txt"), 'w') as f:
-                f.write(f"Command: {' '.join(main_cmd)}\n")
-                f.write(f"Return code: {main_result.returncode}\n")
-                f.write(f"STDOUT:\n{main_result.stdout}\n")
-                f.write(f"STDERR:\n{main_result.stderr}\n")
+                f.write(f"Command: {' '.join(build_index_cmd)}\n")
+                f.write(f"Return code: {build_result.returncode}\n")
+                f.write(f"STDOUT:\n{build_result.stdout}\n")
+                f.write(f"STDERR:\n{build_result.stderr}\n")
             return False
 
     # Check if output file was created
