@@ -19,6 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 import sys
+from tqdm import tqdm
 
 
 def ensure_directory(path: str) -> None:
@@ -106,13 +107,22 @@ def run_single_experiment(config_info: Dict, config_dir: str, results_base_dir: 
     main_result = run_command(main_cmd, cwd=workspace_dir)
     if main_result.returncode != 0:
         print(f"❌ Failed to run main.py for {config_name}")
-        # Save error log
-        with open(os.path.join(experiment_dir, "error_log.txt"), 'w') as f:
-            f.write(f"Command: {' '.join(main_cmd)}\n")
-            f.write(f"Return code: {main_result.returncode}\n")
-            f.write(f"STDOUT:\n{main_result.stdout}\n")
-            f.write(f"STDERR:\n{main_result.stderr}\n")
-        return False
+        # Try to build index and rerun
+        print("🔄 Attempting to build index and retry experiment...")
+        build_index_cmd = [sys.executable, "main.py", "--build_indexes", "1", "--config", dest_config]
+        build_result = run_command(build_index_cmd, cwd=workspace_dir)
+        if build_result.returncode == 0:
+            print("✅ Index built successfully. Retrying main.py...")
+            main_result = run_command(main_cmd, cwd=workspace_dir)
+        if main_result.returncode != 0:
+            print(f"❌ Failed again to run main.py for {config_name}")
+            # Save error log
+            with open(os.path.join(experiment_dir, "error_log.txt"), 'w') as f:
+                f.write(f"Command: {' '.join(main_cmd)}\n")
+                f.write(f"Return code: {main_result.returncode}\n")
+                f.write(f"STDOUT:\n{main_result.stdout}\n")
+                f.write(f"STDERR:\n{main_result.stderr}\n")
+            return False
 
     # Check if output file was created
     if not os.path.exists(output_file):
@@ -215,7 +225,7 @@ def run_all_experiments(config_dir: str = "src/config/generated_configs",
     successful_experiments = 0
     failed_experiments = 0
 
-    for i, config_info in enumerate(configs, 1):
+    for i, config_info in enumerate(tqdm(configs, desc="Running experiments", unit="exp"), 1):
         print(f"\n🔄 Progress: {i}/{len(configs)}")
 
         success = run_single_experiment(
