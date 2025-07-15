@@ -13,6 +13,7 @@ from src.utils.logging import get_logger
 from src.utils.rrf_fusion import fuse
 from src.utils.convert_collection_name import convert_collection_name
 from src.utils.preprocess_func_for_bm25 import preprocess_func_for_bm25, tokenize_text
+from tqdm import tqdm
 
 logger = get_logger("alqac25")
 
@@ -63,17 +64,14 @@ def build_local_indexes(
     if config.enable_lexical_search:
         bm25_indexes = {}
 
-    for category, docs in document_store.items():
-        if not docs:
-            continue
-        collection_name = convert_collection_name(category)
-
-        doc_texts = [doc.text for doc in docs]
-        doc_ids = [doc.id for doc in docs]
-
-        # Build semantic index if enabled
-        if config.enable_semantic_search:
-            logger.info(f"Building VectorStore for '{collection_name}'...")
+    # Build semantic indexes with progress bar
+    if config.enable_semantic_search:
+        for category, docs in tqdm(document_store.items(), desc="Semantic Indexing"):
+            if not docs:
+                continue
+            collection_name = convert_collection_name(category)
+            doc_texts = [doc.text for doc in docs]
+            doc_ids = [doc.id for doc in docs]
             collection = client.get_or_create_collection(
                 name=collection_name, metadata={"category": category}
             )
@@ -82,15 +80,13 @@ def build_local_indexes(
             collection.add(embeddings=embeddings,
                            documents=doc_texts, ids=doc_ids)
 
-        
-    for category, docs in wseg_document_store.items():
-        if not docs:
-            continue
-        doc_texts = [doc.text for doc in docs]
-        doc_ids = [doc.id for doc in docs]
-        # Build lexical index if enabled
-        if config.enable_lexical_search:
-            logger.info(f"Building BM25 index for '{category}'...")
+    # Build lexical indexes with progress bar
+    if config.enable_lexical_search:
+        for category, docs in tqdm(wseg_document_store.items(), desc="Lexical Indexing"):
+            if not docs:
+                continue
+            doc_texts = [doc.text for doc in docs]
+            doc_ids = [doc.id for doc in docs]
             tokenized_corpus = [
                 preprocess_func_for_bm25(doc) for doc in doc_texts]
             bm25_indexes[category] = {
@@ -186,9 +182,6 @@ class LocalRetriever:
         semantic_results = []
 
         for category in selected_categories:
-            logger.info(f"Processing category: {category}")
-
-            # Lexical search (BM25)
             if self.config.enable_lexical_search:
                 if category not in self.bm25_indexes:
                     logger.debug(
@@ -197,8 +190,6 @@ class LocalRetriever:
                     continue
                 bm25_data = self.bm25_indexes[category]
                 tokenized_query = preprocess_func_for_bm25(wseg_query)
-                logger.info(f"Running BM25 local search query: {wseg_query}")
-
                 bm25_scores = bm25_data["index"].get_scores(tokenized_query)
                 top_bm25_indices = sorted(
                     range(len(bm25_scores)), key=lambda x: bm25_scores[x], reverse=True
@@ -211,7 +202,6 @@ class LocalRetriever:
                             "bm25_score": bm25_scores[i]}
                     )
 
-            # Semantic search
             if self.config.enable_semantic_search:
                 try:
                     collection = self.chroma_client.get_collection(
