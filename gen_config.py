@@ -25,6 +25,8 @@ def get_base_config() -> Dict[str, Any]:
         "data": {
             "law_path": "dataset/alqac25_law.json",
             "queries_path": "dataset/alqac25_train.json",
+            "wseg_law_path": "dataset/wseg_alqac25_law.json",
+            "wseg_queries_path": "dataset/wseg_alqac25_train.json",
             "output_path": "data/output.json"
         },
         "pipeline": {

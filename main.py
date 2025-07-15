@@ -9,6 +9,7 @@ from src.retrievers.global_retriever import build_global_indexes
 from src.retrievers.local_retriever import build_local_indexes
 from src.models.schemas import Document, QuestionBase
 from src.utils.logging import get_logger
+from tqdm import tqdm
 
 logger = get_logger("alqac25")
 
@@ -94,6 +95,9 @@ def main(config_path: str, build_indexes: bool):
     all_docs, local_docs, queries = load_data(
         config.data.law_path, config.data.queries_path
     )
+    wseg_all_docs, wseg_local_docs, wseg_queries = load_data(
+        config.data.wseg_law_path, config.data.wseg_queries_path
+    )
 
     # ======================================================================
     # STEP 3: OFFLINE INDEXING (Run this once or when data changes)
@@ -101,9 +105,9 @@ def main(config_path: str, build_indexes: bool):
     if build_indexes:
         logger.info("--- Running Offline Indexing for All Components ---")
         if local_retriever_config:
-            build_local_indexes(local_retriever_config, local_docs)
+            build_local_indexes(local_retriever_config, local_docs, wseg_local_docs)
         if global_retriever_config:
-            build_global_indexes(global_retriever_config, all_docs)
+            build_global_indexes(global_retriever_config, all_docs, wseg_all_docs)
         logger.info("\n--- All Indexing Complete ---\n")
 
     # ======================================================================
@@ -121,9 +125,8 @@ def main(config_path: str, build_indexes: bool):
         save_reranked_path=config.pipeline.save_reranked_path,
     )
     results = []
-    for query in queries:
-        logger.info(f"Processing query {query.question_id}: {query.text}")
-        final_ranked_docs = pipeline.retrieve(query.text)
+    for query, wseg_query in tqdm(zip(queries, wseg_queries), total=len(queries), desc="Retrieving"):
+        final_ranked_docs = pipeline.retrieve(query.text, wseg_query.text)
         q_result = {
             "question_id": query.question_id,
             "relevant_articles": []

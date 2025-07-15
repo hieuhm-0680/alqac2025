@@ -40,7 +40,8 @@ class GlobalRetrieverConfig(BaseModel):
 
 
 def build_global_indexes(
-    config: GlobalRetrieverConfig, all_documents: List[Dict[str, str]]
+    config: GlobalRetrieverConfig, all_documents: List[Dict[str, str]],
+    wseg_all_documents: List[Dict[str, str]]
 ):
     config.indexes.index_dir.mkdir(parents=True, exist_ok=True)
     print(
@@ -54,7 +55,6 @@ def build_global_indexes(
         embedding_model = SentenceTransformer(
             config.embedding_model_name, device=device)
 
-        # TODO: chroma client occurs more than once, consider refactoring
         client = chromadb.PersistentClient(
             path=str(config.indexes.chroma_db_path))
 
@@ -77,7 +77,7 @@ def build_global_indexes(
     if config.enable_lexical_search:
         print("\nBuilding global lexical index...")
         lexical_ensemble = LexicalEnsembleRetriever.from_documents(
-            all_documents, config=config.lexical_ensemble_config, k=config.lexical_ensemble_config.k
+            wseg_all_documents, config=config.lexical_ensemble_config, k=config.lexical_ensemble_config.k
         )
 
         with open(config.indexes.lexical_path, "wb") as f:
@@ -110,7 +110,6 @@ class GlobalRetriever:
 
         # Initialize semantic search components if enabled
         if config.enable_semantic_search:
-            # TODO: chroma client occurs more than once, consider refactoring
             self.chroma_client = chromadb.PersistentClient(
                 path=str(config.indexes.chroma_db_path)
             )
@@ -133,14 +132,13 @@ class GlobalRetriever:
             self.embedding_model = None
             logger.info("Semantic search disabled for GlobalRetriever")
 
-        # Validate that at least one search method is enabled
         if not config.enable_lexical_search and not config.enable_semantic_search:
             raise ValueError(
                 "At least one search method (lexical or semantic) must be enabled")
 
         logger.info(">>> GlobalRetriever OK")
 
-    def retrieve(self, query: str) -> List[Dict[str, Union[str, float]]]:
+    def retrieve(self, query: str, wseg_query: str) -> List[Dict[str, Union[str, float]]]:
         query_embedding = self.embedding_model.encode(
             query) if self.config.enable_semantic_search else None
 
@@ -150,11 +148,11 @@ class GlobalRetriever:
         # Lexical search
         if self.config.enable_lexical_search:
             ensemble_docs = self.lexical_ensemble_data._get_relevant_documents(
-                query)
+                wseg_query)
             for doc in ensemble_docs:
                 lexical_results.append({
                     "id": doc.id,
-                    "text": doc.text,
+                    "text": doc.text.replace('_', ' '),
                 })
 
         # Semantic search
@@ -178,15 +176,5 @@ class GlobalRetriever:
             search_results = lexical_results
         elif self.config.enable_semantic_search:
             search_results = semantic_results
-
-        logger.info(
-            f"  - Lexical search found {len(lexical_results)} candidates (enabled: {self.config.enable_lexical_search})."
-        )
-        logger.info(
-            f"  - Semantic search found {len(semantic_results)} candidates (enabled: {self.config.enable_semantic_search})."
-        )
-        logger.info(
-            f"  - Total fused candidates after global search: {len(search_results)}."
-        )
 
         return search_results

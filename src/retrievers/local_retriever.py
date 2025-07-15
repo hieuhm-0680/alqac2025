@@ -44,7 +44,8 @@ class LocalRetrieverConfig(BaseModel):
 
 
 def build_local_indexes(
-    config: LocalRetrieverConfig, document_store: Dict[str, List[Document]]
+    config: LocalRetrieverConfig, document_store: Dict[str, List[Document]],
+    wseg_document_store: Dict[str, List[Document]]
 ):
     config.indexes.index_dir.mkdir(parents=True, exist_ok=True)
     print(
@@ -81,6 +82,12 @@ def build_local_indexes(
             collection.add(embeddings=embeddings,
                            documents=doc_texts, ids=doc_ids)
 
+        
+    for category, docs in wseg_document_store.items():
+        if not docs:
+            continue
+        doc_texts = [doc.text for doc in docs]
+        doc_ids = [doc.id for doc in docs]
         # Build lexical index if enabled
         if config.enable_lexical_search:
             logger.info(f"Building BM25 index for '{category}'...")
@@ -167,7 +174,7 @@ class LocalRetriever:
         self.classifier = CategoryClassifier(config.classifier)
         logger.info("LocalRetriever OK")
 
-    def retrieve(self, query: str) -> List[Dict[str, Union[str, int, float]]]:
+    def retrieve(self, query: str, wseg_query: str) -> List[Dict[str, Union[str, int, float]]]:
         selected_categories = self.classifier.classify(query)
         if not selected_categories:
             return []
@@ -189,7 +196,8 @@ class LocalRetriever:
                     )
                     continue
                 bm25_data = self.bm25_indexes[category]
-                tokenized_query = preprocess_func_for_bm25(query)
+                tokenized_query = preprocess_func_for_bm25(wseg_query)
+                logger.info(f"Running BM25 local search query: {wseg_query}")
 
                 bm25_scores = bm25_data["index"].get_scores(tokenized_query)
                 top_bm25_indices = sorted(
@@ -197,7 +205,7 @@ class LocalRetriever:
                 )[:4 * self.config.top_k_lexical]
                 for i in top_bm25_indices:
                     doc_id = bm25_data["doc_ids"][i]
-                    doc_text = bm25_data["texts"][i]
+                    doc_text = bm25_data["texts"][i].replace('_', ' ')
                     bm25_results.append(
                         {"id": doc_id, "text": doc_text,
                             "bm25_score": bm25_scores[i]}
@@ -246,8 +254,4 @@ class LocalRetriever:
         else:
             results = []
 
-        logger.info(
-            f"Retrieved {len(bm25_results)} BM25 results (enabled: {self.config.enable_lexical_search}) and {len(semantic_results)} semantic results (enabled: {self.config.enable_semantic_search})."
-        )
-        logger.info(f"Final results count: {len(results)}")
         return results

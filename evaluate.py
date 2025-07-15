@@ -1,6 +1,9 @@
 import json
 import os
+from src.utils.logging import get_logger
 from src.evaluator import Evaluator
+
+logger = get_logger("alqac25")
 
 def eval_retrieval(predictions_file, ground_truth_file, output_file=None):
     """Evaluate retrieval predictions against ground truth."""
@@ -32,17 +35,20 @@ def eval_retrieval(predictions_file, ground_truth_file, output_file=None):
         print(f"  {metric}: {score:.4f}")
     print(f"\n💾 Results saved to: {output_file}")
     
-    with open(output_file, 'r', encoding='utf-8') as f:
-        saved_data = json.load(f)
-    
-    print(f"\n📄 Saved file structure:")
-    print(f"  - timestamp: {saved_data['timestamp']}")
-    print(f"  - task_type: {saved_data['task_type']}")
-    print(f"  - predictions_file: {saved_data['predictions_file']}")
-    print(f"  - ground_truth_file: {saved_data['ground_truth_file']}")
-    print(f"  - total_metrics: {saved_data['summary']['total_metrics']}")
-    print(f"  - best_metric: {saved_data['summary']['best_metric']}")
-    print(f"  - worst_metric: {saved_data['summary']['worst_metric']}")
+    try:
+        with open(output_file, 'r', encoding='utf-8') as f:
+            saved_data = json.load(f)
+        
+        print(f"\n📄 Saved file structure:")
+        print(f"  - timestamp: {saved_data['timestamp']}")
+        print(f"  - task_type: {saved_data['task_type']}")
+        print(f"  - predictions_file: {saved_data['predictions_file']}")
+        print(f"  - ground_truth_file: {saved_data['ground_truth_file']}")
+        print(f"  - total_metrics: {saved_data['summary']['total_metrics']}")
+        print(f"  - best_metric: {saved_data['summary']['best_metric']}")
+        print(f"  - worst_metric: {saved_data['summary']['worst_metric']}")
+    except Exception as e:
+        logger.error(f"❌ Failed to read saved file: {e}")
 
     return results
     

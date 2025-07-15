@@ -83,18 +83,18 @@ class Retriever:
         self.save_fused_path = save_fused_path
         self.save_reranked_path = save_reranked_path
 
-    def retrieve(self, query: str) -> List[Dict[str, Union[str, float]]]:
+    def retrieve(self, query: str, wseg_query: str) -> List[Dict[str, Union[str, float]]]:
         local_results = []
         global_results = []
 
         if self.local_retriever is not None:
-            local_results = self.local_retriever.retrieve(query)
+            local_results = self.local_retriever.retrieve(query, wseg_query)
             if self.save_local_path:
                 with open(self.save_local_path, "w", encoding="utf-8") as f:
                     json.dump(local_results, f, ensure_ascii=False, indent=2)
 
         if self.global_retriever is not None:
-            global_results = self.global_retriever.retrieve(query)
+            global_results = self.global_retriever.retrieve(query, wseg_query)
             if self.save_global_path:
                 with open(self.save_global_path, "w", encoding="utf-8") as f:
                     json.dump(global_results, f, ensure_ascii=False, indent=2)

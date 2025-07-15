@@ -17,7 +17,9 @@ class SystemConfig(BaseModel):
 
 class DataConfig(BaseModel):
     law_path: str
+    wseg_law_path: str
     queries_path: str
+    wseg_queries_path: str
     output_path: str
 
 
@@ -55,5 +57,4 @@ def load_config(config_path: str | Path = "config/config.yaml") -> Config:
     """Loads configuration from a YAML file and validates it with Pydantic."""
     with open(config_path, "r") as f:
         config_data = yaml.safe_load(f)
-    print(config_data.keys())
     return Config(**config_data)
