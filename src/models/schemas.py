@@ -37,8 +37,8 @@ class QuestionBase(BaseModel):
     """Base question model."""
 
     question_id: str = Field(..., description="Unique question identifier")
-    question_type: QuestionType = Field(..., description="Type of question")
     text: str = Field(..., description="Question text")
+    question_type: Optional[QuestionType] = Field(None, description="Type of question")
 
 
 class TrainingQuestion(QuestionBase):

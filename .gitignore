@@ -203,5 +203,5 @@ _test/
 
 src/config/generated_configs/
 output/
-experiments/
+experiments*/
 analysis/
