@@ -141,8 +141,34 @@ Chỉ trả lời "yes" hoặc "no", không giải thích thêm."""
         return all_scores
 
 
+def load_questions_mapping(questions_file: str) -> Dict[str, str]:
+    """Load question ID to text mapping from questions file.
+
+    Args:
+        questions_file: Path to JSON file containing questions
+
+    Returns:
+        Dictionary mapping question_id to question text
+    """
+    mapping = {}
+
+    try:
+        with open(questions_file, 'r', encoding='utf-8') as f:
+            questions = json.load(f)
+
+        for q in questions:
+            if 'question_id' in q and 'text' in q:
+                mapping[q['question_id']] = q['text']
+
+        print(f"Loaded {len(mapping)} questions from {questions_file}")
+    except Exception as e:
+        print(f"Error loading questions from {questions_file}: {e}")
+
+    return mapping
+
+
 def rerank_retrieval_results(input_file: str, output_file: str, reranker: QwenReranker,
-                             batch_size: int = 8) -> None:
+                             batch_size: int = 8, questions_file: str = None) -> None:
     """Rerank retrieval results from a JSON file.
 
     Args:
@@ -150,25 +176,39 @@ def rerank_retrieval_results(input_file: str, output_file: str, reranker: QwenRe
         output_file: Path to output JSON file  
         reranker: QwenReranker instance
         batch_size: Batch size for processing
+        questions_file: Optional path to JSON file containing questions
     """
     print(f"Loading retrieval results from {input_file}...")
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
+    # Load questions mapping if provided
+    questions_map = {}
+    if questions_file:
+        questions_map = load_questions_mapping(questions_file)
+
     print(f"Processing {len(data)} questions...")
+    processed_count = 0
+    skipped_count = 0
 
     for item in tqdm(data, desc="Processing questions"):
         question_text = item.get('text', '')
-        if not question_text and 'question_id' in item:
-            # If no text field, this might be from retrieval_results.json format
-            # We'll need to look up the question text from another source
+        question_id = item.get('question_id', '')
+
+        # Try to get question text from embedded data or external file
+        if not question_text and question_id and questions_map:
+            question_text = questions_map.get(question_id, '')
+
+        if not question_text:
             print(
-                f"Warning: No question text found for {item.get('question_id', 'unknown')}")
+                f"Warning: No question text found for {question_id or 'unknown'}")
+            skipped_count += 1
             continue
 
         relevant_articles = item.get('relevant_articles', [])
 
         if not relevant_articles:
+            skipped_count += 1
             continue
 
         # Prepare queries and documents
@@ -187,6 +227,10 @@ def rerank_retrieval_results(input_file: str, output_file: str, reranker: QwenRe
 
         # Update the item
         item['relevant_articles'] = relevant_articles
+        processed_count += 1
+
+    print(f"Successfully processed: {processed_count}")
+    print(f"Skipped: {skipped_count}")
 
     # Save reranked results
     print(f"Saving reranked results to {output_file}...")
@@ -197,7 +241,7 @@ def rerank_retrieval_results(input_file: str, output_file: str, reranker: QwenRe
 
 
 def process_folder(input_folder: str, output_folder: str, reranker: QwenReranker,
-                   batch_size: int = 8) -> None:
+                   batch_size: int = 8, questions_file: str = None) -> None:
     """Process all JSON files in a folder.
 
     Args:
@@ -205,6 +249,7 @@ def process_folder(input_folder: str, output_folder: str, reranker: QwenReranker
         output_folder: Path to output folder for reranked files
         reranker: QwenReranker instance
         batch_size: Batch size for processing
+        questions_file: Optional path to JSON file containing questions
     """
     input_path = Path(input_folder)
     output_path = Path(output_folder)
@@ -227,7 +272,7 @@ def process_folder(input_folder: str, output_folder: str, reranker: QwenReranker
 
         try:
             rerank_retrieval_results(str(json_file), str(
-                output_file), reranker, batch_size)
+                output_file), reranker, batch_size, questions_file)
         except Exception as e:
             print(f"Error processing {json_file.name}: {e}")
             continue
@@ -240,6 +285,8 @@ def main():
                         help="Input JSON file or folder containing JSON files")
     parser.add_argument("--output", "-o", required=True,
                         help="Output JSON file or folder for reranked results")
+    parser.add_argument("--questions", "-q", type=str, default=None,
+                        help="Optional JSON file containing questions (question_id and text)")
     parser.add_argument("--batch_size", "-b", type=int, default=8,
                         help="Batch size for processing (default: 8)")
     parser.add_argument("--device", type=str, default=None,
@@ -265,10 +312,11 @@ def main():
     if input_path.is_file():
         # Process single file
         rerank_retrieval_results(
-            args.input, args.output, reranker, args.batch_size)
+            args.input, args.output, reranker, args.batch_size, args.questions)
     elif input_path.is_dir():
         # Process folder
-        process_folder(args.input, args.output, reranker, args.batch_size)
+        process_folder(args.input, args.output, reranker,
+                       args.batch_size, args.questions)
     else:
         print(f"Error: {args.input} is not a valid file or directory")
         return
