@@ -10,6 +10,7 @@ model_name = "Qwen/Qwen2.5-7B-Instruct"
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype=torch.float16,
+    device_map="auto",
     attn_implementation="flash_attention_2"
 )
 
