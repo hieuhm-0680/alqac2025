@@ -56,7 +56,7 @@ Tài liệu hiện tại:
 
 Instructions:
 1. Extract any information from the current text that is relevant to the question.
-2. Summarize only the relevant information. If there's nothing relevant, output: "No relevant information found."
+2. Summarize only the relevant information.
 3. Output must be in Vietnamese, concise, and factual.
 4. Do not make up any information.
 """
@@ -86,19 +86,24 @@ def call_worker_agent(question, chunk, previous_summary=None):
 
     response = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0]
     response = response.strip()
-    if 'no relevant information found' in response.lower():
-        return ""
     return response
 
 def prepare_question(question):
     if question['question_type'] == QuestionType.TRUE_FALSE:
-        return question['text']
+        template = f"Phát biểu sau có đúng hay sai: {question['text']}?"
+        return template
     elif question['question_type'] == QuestionType.MULTIPLE_CHOICE:
-        return question['text'] + "\n\n" + " ".join([f"{key}: {value}" for key, value in question.get('choices', {}).items()])
+        template = f"Đâu là lựa chọn đúng cho câu hỏi sau: {question['text']}\n\n"
+        template += "Các lựa chọn:\n"
+        template += "\n".join([f"{key}: {value}" for key, value in question['choices'].items()])
+        return template
     elif question['question_type'] == QuestionType.FREE_TEXT:
         return question['text']
     else:
         raise ValueError(f"Unsupported question type: {question['question_type']}")
+    
+def prepare_chunk(chunk, law_id):
+    return f"...(đây là trích dẫn từ luật {law_id}) \n\n{chunk}".strip()
 
 def run_process(questions, article_mapping):
     results = []
@@ -113,13 +118,13 @@ def run_process(questions, article_mapping):
         }
         question_text = prepare_question(question)
         response = None
-
         for i, item in enumerate(question['relevant_articles'], 1):
             law_id = item['law_id']
             articles_id = item['article_id']
             text = article_mapping[law_id][articles_id]
             chunks = splitter.split_text(text)
             for j, chunk in enumerate(chunks, 1):
+                chunk = prepare_chunk(chunk, law_id)
                 response = call_worker_agent(question_text, chunk, response)
                 state['worker_responses'].append({
                     'worker': f"worker_{i}_{j}",
