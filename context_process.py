@@ -1,4 +1,5 @@
 import json
+from tqdm import tqdm
 import argparse
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import torch
@@ -101,7 +102,7 @@ def prepare_question(question):
 
 def run_process(questions, article_mapping):
     results = []
-    for question in questions:
+    for question in tqdm(questions, desc="Processing questions"):
         state = {
             'question_id': question['question_id'],
             'question_type': question['question_type'],
