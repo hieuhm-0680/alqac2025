@@ -34,9 +34,8 @@ Instructions:
 2. Identify any new information from the current text that is relevant to the question.
 3. Combine the new information with the previous summary if needed, removing redundant parts.
 4. If the current text contains no new relevant information, just pass the previous summary unchanged.
-5. Output must be in Vietnamese, concise, and factual.
+5. Output must be in Vietnamese, concise, and factual, DO NOT GIVE THE ANSWER.
 6. Do not make up any information.
-7. Do not give the final answer, just provide the updated summary.
 """
 
 USER_PROMPT_QWEN25INSTRUCT_NO_SUMMARY = """
@@ -49,9 +48,8 @@ Tài liệu hiện tại:
 Instructions:
 1. Extract any information from the current text that is relevant to the question.
 2. Summarize only the relevant information.
-3. Output must be in Vietnamese, concise, and factual.
+3. Output must be in Vietnamese, concise, and factual, DO NOT GIVE THE ANSWER.
 4. Do not make up any information.
-5. Do not give the final answer, just provide the updated summary.
 """
 #####################################################
 
@@ -71,9 +69,7 @@ Tài liệu hiện tại:
 Hướng dẫn:
 1. Trích xuất bất kỳ thông tin nào từ văn bản hiện tại liên quan đến câu hỏi.
 2. Tóm tắt chỉ thông tin liên quan.
-3. Đầu ra phải bằng tiếng Việt, ngắn gọn và chính xác.
-4. Không tạo ra thông tin.
-5. Không đưa ra câu trả lời cuối cùng, chỉ cung cấp tóm tắt đã cập nhật.
+3. Đầu ra phải bằng tiếng Việt, ngắn gọn và chính xác, TUYỆT ĐỐI KHÔNG ĐƯA RA NHẬN ĐỊNH VỀ ĐÁP ÁN.
 """
 
 USER_PROMPT_QWEN25_VI = """
@@ -91,9 +87,7 @@ Hướng dẫn:
 2. Xác định bất kỳ thông tin mới nào từ văn bản hiện tại liên quan đến câu hỏi.
 3. Kết hợp thông tin mới với tóm tắt trước đó nếu cần, loại bỏ các phần trùng lặp.
 4. Nếu văn bản hiện tại không chứa thông tin mới nào liên quan, chỉ cần giữ nguyên tóm tắt trước đó.
-5. Đầu ra phải bằng tiếng Việt, ngắn gọn và chính xác.
-6. Không tạo ra thông tin.
-7. Không đưa ra câu trả lời cuối cùng, chỉ cung cấp tóm tắt đã cập nhật.
+5. Đầu ra phải bằng tiếng Việt, ngắn gọn và chính xác, TUYỆT ĐỐI KHÔNG ĐƯA RA NHẬN ĐỊNH VỀ ĐÁP ÁN.
 """
 
 
