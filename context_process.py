@@ -14,6 +14,32 @@ prompt_language = "en"
 splitter = RecursiveCharacterTextSplitter(separators=["\n\n", r"\n\d+\. Sửa đổi", r"\n\d+", "\n", " ", ""], is_separator_regex=True, chunk_size=1200, chunk_overlap=200)
 
 #####################################################
+SYSTEM_PROMPT_COA = """
+    You are a helpful assistant. 
+    (Bạn là một trợ lý hữu ích.)
+    Your task is to help answer a question given in a document. The first step is to extract quotes relevant to the question from the document, delimited by ####.
+    (Nhiệm vụ của bạn là giúp trả lời một câu hỏi được đưa ra trong một tài liệu. Bước đầu tiên là trích dẫn các đoạn văn liên quan đến câu hỏi từ tài liệu, được phân cách bởi ####.)
+    Please output the list of quotes using <quotes></quotes>.
+    (Vui lòng xuất danh sách các đoạn văn bằng <quotes></quotes>.)
+    Respond with "No relevant quotes found!" if no relevant quotes were found.
+    (Trả lời "No relevant quotes found!" nếu không tìm thấy đoạn văn nào liên quan.)
+    
+    ####
+    {previous_summary}
+    
+    {current_chunk}
+    ####
+"""
+USER_PROMPT_COA = """
+    Question: {question}
+"""
+
+# You need to read the current source text and summary of previous source text (if any), and generate a summary to include both of theme.
+
+# Bạn cần đọc tài liệu hiện tại và tóm tắt của các tài liệu trước đó (nếu có), và tạo ra một tóm tắt bao gồm cả hai.
+# """
+
+
 SYSTEM_PROMPT_QWEN25 = (
         "You are a helpful assistant specialized in multi-step document comprehension. "
         "Your task is to extract relevant information from the current text to help answer the user's question in Vietnamese. "
@@ -92,26 +118,33 @@ Hướng dẫn:
 
 
 def build_worker_prompt(question, current_chunk, previous_summary=None):
-    system_prompt = SYSTEM_PROMPT_QWEN25 if prompt_language == "en" else SYSTEM_PROMPT_QWEN25_VI
+    system_prompt = SYSTEM_PROMPT_COA.format(
+        previous_summary=previous_summary if previous_summary else "",
+        current_chunk=current_chunk
+    )
 
-    if previous_summary:
-        user_prompt = USER_PROMPT_QWEN25INSTRUCT.format(
-            question=question,
-            current_chunk=current_chunk,
-            previous_summary=previous_summary
-        ) if prompt_language == "en" else USER_PROMPT_QWEN25_VI.format(
-            question=question,
-            current_chunk=current_chunk,
-            previous_summary=previous_summary
-        )
-    else:
-        user_prompt = USER_PROMPT_QWEN25INSTRUCT_NO_SUMMARY.format(
-            question=question,
-            current_chunk=current_chunk
-        ) if prompt_language == "en" else USER_PROMPT_QWEN25_VI_NO_SUMMARY.format(
-            question=question,
-            current_chunk=current_chunk
-        )
+    user_prompt = USER_PROMPT_COA.format(
+        question=question
+    )
+
+    # if previous_summary:
+    #     user_prompt = USER_PROMPT_QWEN25INSTRUCT.format(
+    #         question=question,
+    #         current_chunk=current_chunk,
+    #         previous_summary=previous_summary
+    #     ) if prompt_language == "en" else USER_PROMPT_QWEN25_VI.format(
+    #         question=question,
+    #         current_chunk=current_chunk,
+    #         previous_summary=previous_summary
+    #     )
+    # else:
+    #     user_prompt = USER_PROMPT_QWEN25INSTRUCT_NO_SUMMARY.format(
+    #         question=question,
+    #         current_chunk=current_chunk
+    #     ) if prompt_language == "en" else USER_PROMPT_QWEN25_VI_NO_SUMMARY.format(
+    #         question=question,
+    #         current_chunk=current_chunk
+    #     )
 
     return [
         {"role": "system", "content": system_prompt},
