@@ -11,7 +11,7 @@ tokenizer = None
 
 prompt_language = "en"
 
-splitter = RecursiveCharacterTextSplitter(separators=["\n\n", r"\n\d+\. Sửa đổi", "\n\d+", "\n", " ", ""], is_separator_regex=True, chunk_size=1200, chunk_overlap=200)
+splitter = RecursiveCharacterTextSplitter(separators=["\n\n", r"\n\d+\. Sửa đổi", r"\n\d+", "\n", " ", ""], is_separator_regex=True, chunk_size=1200, chunk_overlap=200)
 
 #####################################################
 SYSTEM_PROMPT_QWEN25 = (
@@ -222,6 +222,7 @@ def main():
     
     global model, tokenizer, prompt_language
     model_name = args.model_name
+    print(f"Loading model {model_name}...")
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         torch_dtype=torch.float16,
