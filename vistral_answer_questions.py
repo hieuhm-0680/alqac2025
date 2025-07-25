@@ -52,7 +52,6 @@ def setup_model(model_name_or_path: str = "Viet-Mistral/Vistral-7B-Chat", device
 
 
 def create_system_prompt() -> str:
-    """Create the system prompt for the Vistral model."""
     system_prompt = "Bạn là một trợ lý AI chuyên gia trong lĩnh vực pháp luật. "
     system_prompt += "Nhiệm vụ của bạn là trả lời các câu hỏi pháp luật dựa trên ngữ cảnh được cung cấp. "
     system_prompt += "Hãy phân tích kỹ thông tin trong ngữ cảnh pháp luật và đưa ra câu trả lời chính xác. "
@@ -67,15 +66,20 @@ def create_system_prompt() -> str:
 def generate_true_false_conversation(question: str, context: str) -> List[Dict[str, str]]:
     system_prompt = create_system_prompt()
 
-    user_message = f"""Dưới đây là một câu hỏi Đúng/Sai trong lĩnh vực pháp luật. Hãy trả lời "Đúng" hoặc "Sai" dựa vào ngữ cảnh pháp luật được cung cấp.
+    user_message = f"""Dưới đây là một nhận định trong lĩnh vực pháp luật. Hãy cho biết nhận định này là "Đúng" hoặc "Sai" dựa vào ngữ cảnh pháp luật được cung cấp. 
 
 Ngữ cảnh pháp luật:
 {context}
 
-Câu hỏi: {question}
+Nhận định: {question}
 
-Đầu tiên, hãy suy nghĩ và phân tích kỹ ngữ cảnh pháp luật trong thẻ <thinking></thinking>.
-Sau đó, đưa ra câu trả lời cuối cùng là "Đúng" hoặc "Sai" trong thẻ <answer></answer>."""
+Đầu tiên, hãy suy nghĩ và phân tích kỹ ngữ cảnh pháp luật trong thẻ <thinking></thinking>. Luôn cẩn thận với những từ mang tính phủ định như "không", "không đúng", "không chính xác", "không phải", v.v.
+Tiếp theo, hãy đọc lại nhận định một lần nữa: {question}.
+Sau đó, đưa ra câu trả lời cuối cùng là "Đúng" hoặc "Sai" trong thẻ <answer></answer>.
+
+Định dạng câu trả lời: `<thinking>...</thinking> <answer>Đúng/Sai</answer>`
+
+"""
 
     conversation = [
         {"role": "system", "content": system_prompt},
@@ -93,17 +97,29 @@ def generate_multiple_choice_conversation(question: str, context: str, choices: 
 
     user_message = f"""Dưới đây là một câu hỏi trắc nghiệm trong lĩnh vực pháp luật. Hãy chọn một đáp án đúng (A, B, C hoặc D) dựa vào ngữ cảnh pháp luật được cung cấp.
 
-Ngữ cảnh pháp luật:
-{context}
-
 Câu hỏi: {question}
 
 Các lựa chọn:
 {choices_text}
 
-Đầu tiên, hãy suy nghĩ và phân tích kỹ mỗi lựa chọn dựa trên ngữ cảnh pháp luật trong thẻ <thinking></thinking>.
-Sau đó, đưa ra câu trả lời cuối cùng là một trong các lựa chọn: "A", "B", "C" hoặc "D" trong thẻ <answer></answer>."""
 
+Đầu tiên, đọc kỹ câu hỏi và các lựa chọn, nắm điểm khác nhau cơ bản giữa các lựa chọn. Luôn cẩn thận với những từ mang tính phủ định như "không", "không đúng", "không chính xác", "không phải", v.v.
+Tiếp theo, đọc ngữ cảnh pháp luật bên dưới:
+{context}
+Kết hợp với mỗi đáp án, hãy suy nghĩ và phân tích kỹ, giải thích tại sao đáp án này lại đúng/sai dựa trên ngữ cảnh pháp luật được cung cấp.
+Đặt suy nghĩ của bạn trong thẻ <thinking></thinking>.
+
+Cuối cùng, đưa ra câu trả lời là một trong các lựa chọn: "A", "B", "C" hoặc "D" trong thẻ <answer></answer>.
+
+Định dạng câu trả lời:
+```
+<thinking>
+...
+</thinking>
+
+<answer>A/B/C/D</answer>
+```
+"""
     conversation = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_message}
@@ -118,13 +134,24 @@ def generate_free_text_conversation(question: str, context: str) -> List[Dict[st
 
     user_message = f"""Dưới đây là một câu hỏi tự luận trong lĩnh vực pháp luật. Hãy trả lời câu hỏi dựa vào ngữ cảnh pháp luật được cung cấp.
 
+Câu hỏi: {question}
+
 Ngữ cảnh pháp luật:
 {context}
 
-Câu hỏi: {question}
+Đầu tiên, hãy suy nghĩ và phân tích kỹ ngữ cảnh pháp luật trong thẻ <thinking></thinking>, cẩn thân với những từ mang tính phủ định như "không", "không đúng", "không chính xác", "không phải", v.v..
+Sau đó, đọc lại câu hỏi một lần nữa: {question}.
+Cuối cùng, đưa ra câu trả lời chính xác, ngắn gọn và đầy đủ trong thẻ <answer></answer>.
 
-Đầu tiên, hãy suy nghĩ và phân tích kỹ ngữ cảnh pháp luật trong thẻ <thinking></thinking>.
-Sau đó, đưa ra câu trả lời cuối cùng chính xác, ngắn gọn và đầy đủ trong thẻ <answer></answer>."""
+Định dạng câu trả lời:
+```
+<thinking>
+...
+</thinking>
+
+<answer>...</answer>
+```
+"""
 
     conversation = [
         {"role": "system", "content": system_prompt},

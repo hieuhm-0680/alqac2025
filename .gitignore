@@ -205,3 +205,6 @@ src/config/generated_configs/
 output/
 experiments*/
 analysis/
+
+temp/
+attachments/
